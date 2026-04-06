@@ -4,7 +4,7 @@ import (
 	"time"
 )
 
-// Node is basic type if in-game server
+// Node is basic type of in-game server
 type Node struct {
 	// mu                 sync.RWMutex  // for future optimization (Per-node locking)
 	id                 string        // stands for IP-address

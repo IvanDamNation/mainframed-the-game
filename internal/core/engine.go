@@ -47,7 +47,7 @@ func (e *Engine) Snapshot() []Node {
 }
 
 // NetCat is a player utility action.
-// It tryes connect to Node by ID
+// It tries connect to Node by ID
 func (e *Engine) NetCat(nodeID string) error {
 	e.world.mu.RLock()
 	defer e.world.mu.RUnlock()

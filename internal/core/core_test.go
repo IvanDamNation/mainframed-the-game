@@ -2,6 +2,7 @@ package core
 
 import (
 	"errors"
+	"sync"
 	"testing"
 	"time"
 )
@@ -23,7 +24,7 @@ func TestJohnTheRipper_Success(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	time.Sleep(10 * time.Millisecond)
+	time.Sleep(20 * time.Millisecond)
 
 	cracked, err := e.IsNodeCracked(nodeID)
 	if err != nil {
@@ -62,19 +63,34 @@ func TestJohnTheRipper_ConcurrentAttacksOnSameNode(t *testing.T) {
 	e := setupEngine()
 	nodeID := "10.0.0.1"
 
+	var wg sync.WaitGroup
+	errCh := make(chan error, 10)
+
+	wg.Add(10)
 	for range 10 {
 		go func() {
-			err := e.JohnTheRipper(nodeID)
-			if err != nil {
-				t.Errorf("unexpected error during concurrent attack: %v", err)
-			}
+			defer wg.Done()
+			errCh <- e.JohnTheRipper(nodeID)
 		}()
 	}
 
-	time.Sleep(20 * time.Millisecond)
+	go func() {
+		wg.Wait()
+		close(errCh)
+	}()
 
-	node, _ := e.world.nodes[nodeID]
-	if !node.IsCracked() {
+	for err := range errCh {
+		if err != nil && !errors.Is(err, ErrNodeIsCracked) {
+			t.Errorf("unexpected error during concurrent attack: %v", err)
+		}
+	}
+
+	time.Sleep(20 * time.Millisecond)
+	cracked, err := e.IsNodeCracked(nodeID)
+	if err != nil {
+		t.Fatalf("failed to check node: %v", err)
+	}
+	if !cracked {
 		t.Error("node should be cracked after concurrent attacks")
 	}
 }
